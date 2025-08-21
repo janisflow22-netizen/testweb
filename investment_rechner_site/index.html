@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light">
+  <title>Investment-Rechner – iOS/Android kompatibel</title>
+  <style>
+    :root{
+      --bg:#0e0f12;--card:#151821;--text:#e6e9ef;--muted:#8b93a7;--accent:#6ea8fe;
+      --border:#262b39;--shadow:0 6px 18px rgba(0,0,0,.3);--radius:14px;
+    }
+    html[data-theme="light"]{--bg:#f7f8fb;--card:#fff;--text:#121417;--muted:#606b85;--border:#e7e9ef;--shadow:0 6px 18px rgba(16,24,40,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;font:500 16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--text);background:var(--bg)}
+    .wrap{max-width:1280px;margin:auto;padding:20px}
+    header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#6ea8fe,#9ad0a1);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow)}
+    h1{margin:0;font-size:clamp(20px,4vw,32px)}
+    .lead{color:var(--muted);margin:4px 0 0}
+    .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .pill{background:rgba(110,168,254,.18);border:1px dashed var(--accent);color:var(--accent);font-size:12px;padding:4px 6px;border-radius:8px}
+    .grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    label{font-weight:600;display:block;margin-top:10px}
+    input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text)}
+    input:focus{outline:none;border-color:var(--accent)}
+    .btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#fff}
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .toolbar{margin-top:10px;display:flex;flex-wrap:wrap;gap:10px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    thead{color:var(--muted);font-size:13px}
+    tr{border-bottom:1px solid var(--border)}
+    .sum{font-weight:800}
+    .vis{min-height:180px;display:flex;align-items:flex-end;gap:6px;margin-top:8px;overflow-x:auto}
+    .bar{flex:1;min-width:40px;border-radius:8px 8px 0 0;display:flex;align-items:flex-end;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+    .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:13px;color:var(--muted)}
+    .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+    .warn{background:#332; border:1px solid #a55; color:#f3c4c4; padding:10px 12px; border-radius:10px; margin-bottom:12px; font-size:14px}
+    footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div id="env-warning" class="warn">
+    ⚠️ Diese Vorschau blockiert JavaScript. Bitte <b>in Safari/Chrome öffnen</b> (Teilen → „In Safari öffnen“), sonst werden Ergebnis & Darkmode nicht angezeigt.
+  </div>
+
+  <header>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="logo">INV</div>
+      <div>
+        <h1>Investment-Rechner</h1>
+        <p class="lead">Automatische Aufteilung nach Plan:</p>
+        <div class="pills">
+          <span class="pill">50% ETFs (60% MSCI World / 40% EM)</span>
+          <span class="pill">20% Dividenden</span>
+          <span class="pill">10% BigTech</span>
+          <span class="pill">20% Krypto (70% BTC / 30% ETH)</span>
+        </div>
+      </div>
+    </div>
+    <button id="theme-toggle" class="btn secondary" onclick="toggleTheme()">Dark/Light</button>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Eingaben</h2>
+      <label>Gesamtbetrag</label>
+      <input id="amount" type="number" placeholder="z. B. 10000" oninput="compute()" />
+      <label>Währungssymbol</label>
+      <input id="currency" type="text" value="€" oninput="compute()" />
+      <div class="toolbar">
+        <button id="fill-demo" class="btn primary" onclick="fillDemo()">Beispiel füllen</button>
+        <button id="reset" class="btn secondary" onclick="resetAll()">Zurücksetzen</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <h2>Ergebnis</h2>
+        <div class="toolbar">
+          <button id="copy" class="btn secondary" onclick="copyBreakdown()">Aufteilung kopieren</button>
+          <button id="csv" class="btn primary" onclick="downloadCSV()">CSV exportieren</button>
+        </div>
+      </div>
+      <div id="bars" class="vis"></div>
+      <div id="legend" class="legend"></div>
+      <table>
+        <thead><tr><th>Position</th><th>%</th><th>Betrag</th></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr class="sum"><td>Summe</td><td>100%</td><td id="sumAmt">–</td></tr></tfoot>
+      </table>
+    </section>
+  </div>
+
+  <footer>made from Dino with ❤️ · offline nutzbar · Dark/Light umschaltbar</footer>
+</div>
+
+<script>
+// hide warning if JS runs (blocked preview will leave it visible)
+document.getElementById('env-warning').style.display='none';
+
+const allocation=[
+ {label:"MSCI World (ETF)",pct:.30,color:"#6ea8fe"},
+ {label:"Emerging Markets (ETF)",pct:.20,color:"#9ad0a1"},
+ {label:"Dividenden-Aktien",pct:.20,color:"#ffd166"},
+ {label:"BigTech-Aktien",pct:.10,color:"#f48fb1"},
+ {label:"Bitcoin",pct:.14,color:"#f2a900"},
+ {label:"Ethereum",pct:.06,color:"#8c7ae6"},
+];
+
+function toNumber(v){if(!v)return 0;return parseFloat(String(v).replace(",","."))||0;}
+function fmtCur(n,c){try{return new Intl.NumberFormat("de-DE",{minimumFractionDigits:2}).format(n)+" "+c;}catch(e){return n.toFixed(2)+" "+c;}}
+function fmtPct(p){return (p*100).toFixed(1).replace(".",",")+"%";}
+function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+
+function compute(){
+  const total=toNumber(document.getElementById("amount").value);
+  const cur=(document.getElementById("currency").value||"€").trim()||"€";
+  const tbody=document.getElementById("tbody");clear(tbody);
+  const bars=document.getElementById("bars");clear(bars);
+  const legend=document.getElementById("legend");clear(legend);
+
+  allocation.forEach(a=>{
+    // Tabelle
+    const tr=document.createElement("tr");
+    const td1=document.createElement("td");td1.textContent=a.label;
+    const td2=document.createElement("td");td2.textContent=fmtPct(a.pct);
+    const td3=document.createElement("td");td3.textContent=fmtCur(total*a.pct,cur);
+    tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);tbody.appendChild(tr);
+    // Balken
+    const bar=document.createElement("div");bar.className="bar";
+    bar.style.height=(a.pct*200)+"px";bar.style.background=a.color;bar.title=a.label;
+    bar.textContent=Math.round(a.pct*100)+"%";bars.appendChild(bar);
+    // Legende
+    const span=document.createElement("span");
+    const dot=document.createElement("i");dot.className="dot";dot.style.background=a.color;
+    span.appendChild(dot);span.append(" "+a.label);legend.appendChild(span);
+  });
+  document.getElementById("sumAmt").textContent=fmtCur(total,cur);
+}
+
+function copyBreakdown(){
+  let text="Aufteilung:\n";const total=toNumber(document.getElementById("amount").value);const cur=document.getElementById("currency").value||"€";
+  allocation.forEach(a=>{text+=`${a.label}: ${fmtPct(a.pct)} = ${fmtCur(total*a.pct,cur)}\n`;});
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):Promise.reject()).catch(()=>alert(text));
+}
+function downloadCSV(){
+  const total=toNumber(document.getElementById("amount").value);const cur=document.getElementById("currency").value||"€";
+  let csv="Position;Prozent;Betrag("+cur+")\n";
+  allocation.forEach(a=>{csv+=`${a.label};${fmtPct(a.pct)};${(total*a.pct).toFixed(2)}\n`;});
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="aufteilung.csv";a.click();
+}
+function fillDemo(){document.getElementById("amount").value=10000;compute();}
+function resetAll(){document.getElementById("amount").value="";document.getElementById("currency").value="€";compute();}
+
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme");
+  const next=cur==="light"?"dark":"light";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("theme",next);}catch(e){}
+}
+
+// init
+document.addEventListener("DOMContentLoaded",compute);
+compute(); // falls DOMContentLoaded nicht feuert in manchen Viewern
+</script>
+</body>
+</html>
